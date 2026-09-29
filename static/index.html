@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тамагочи 🐾</title>
+    <!-- Tailwind CSS через CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Анимация для питомца */
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .pet-bounce {
+            animation: bounce-slow 2s infinite;
+        }
+        /* Анимация появления ошибки */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .error-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-100 to-pink-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+        <!-- Заголовок -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Тамагочи</h1>
+            <p class="text-gray-500 text-sm">Позаботься о своём питомце!</p>
+        </div>
+
+        <!-- Питомец -->
+        <div class="text-center mb-6">
+            <div id="pet-emoji" class="text-8xl pet-bounce cursor-default select-none">😺</div>
+            <h2 id="pet-name" class="text-xl font-semibold text-gray-700 mt-2">Барсик</h2>
+            <div id="pet-status" class="text-sm text-gray-500 mt-1">Весёлый и довольный</div>
+        </div>
+
+        <!-- Прогресс-бары -->
+        <div class="space-y-4 mb-6">
+            <!-- Сытость -->
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-gray-600">🍖 Сытость</span>
+                    <span id="hunger-value" class="font-mono text-gray-800">100</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="hunger-bar" class="bg-orange-400 h-3 rounded-full transition-all duration-500" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <!-- Счастье -->
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-gray-600">😊 Счастье</span>
+                    <span id="happiness-value" class="font-mono text-gray-800">100</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="happiness-bar" class="bg-pink-400 h-3 rounded-full transition-all duration-500" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <!-- Энергия -->
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-gray-600">⚡ Энергия</span>
+                    <span id="energy-value" class="font-mono text-gray-800">100</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="energy-bar" class="bg-blue-400 h-3 rounded-full transition-all duration-500" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Сообщение об ошибке -->
+        <div id="error-message" class="hidden mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-xl text-sm text-center"></div>
+
+        <!-- Кнопки действий -->
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="feedPet()" class="bg-orange-400 hover:bg-orange-500 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 active:scale-95">
+                🍖 Покормить
+            </button>
+            <button onclick="playWithPet()" class="bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 active:scale-95">
+                🎾 Играть
+            </button>
+            <button onclick="sleepPet()" id="sleep-btn" class="bg-blue-400 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 active:scale-95">
+                💤 Спать
+            </button>
+            <button onclick="wakePet()" id="wake-btn" class="bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 active:scale-95 hidden">
+                ☀️ Разбудить
+            </button>
+        </div>
+
+        <!-- Последнее обновление -->
+        <div class="text-center mt-4 text-xs text-gray-400">
+            Обновляется автоматически каждые 5 секунд
+        </div>
+    </div>
+
+    <script>
+        // --- КОНФИГУРАЦИЯ ---
+        const API_URL = window.location.origin; // Автоматически берёт текущий хост
+
+        // --- ЭЛЕМЕНТЫ ДОМА ---
+        const petEmoji = document.getElementById('pet-emoji');
+        const petName = document.getElementById('pet-name');
+        const petStatus = document.getElementById('pet-status');
+        const errorMessage = document.getElementById('error-message');
+
+        const hungerBar = document.getElementById('hunger-bar');
+        const hungerValue = document.getElementById('hunger-value');
+        const happinessBar = document.getElementById('happiness-bar');
+        const happinessValue = document.getElementById('happiness-value');
+        const energyBar = document.getElementById('energy-bar');
+        const energyValue = document.getElementById('energy-value');
+
+        const sleepBtn = document.getElementById('sleep-btn');
+        const wakeBtn = document.getElementById('wake-btn');
+
+        // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            errorMessage.classList.add('error-shake');
+            setTimeout(() => {
+                errorMessage.classList.remove('error-shake');
+                errorMessage.classList.add('hidden');
+            }, 3000);
+        }
+
+        function updatePetUI(pet) {
+            // Обновляем имя
+            petName.textContent = pet.name;
+
+            // Обновляем прогресс-бары
+            hungerBar.style.width = pet.hunger + '%';
+            hungerValue.textContent = pet.hunger;
+            happinessBar.style.width = pet.happiness + '%';
+            happinessValue.textContent = pet.happiness;
+            energyBar.style.width = pet.energy + '%';
+            energyValue.textContent = pet.energy;
+
+            // Определяем эмодзи и статус
+            if (pet.is_sleeping) {
+                petEmoji.textContent = '💤';
+                petStatus.textContent = 'Сладко спит...';
+                sleepBtn.classList.add('hidden');
+                wakeBtn.classList.remove('hidden');
+            } else {
+                sleepBtn.classList.remove('hidden');
+                wakeBtn.classList.add('hidden');
+
+                if (pet.hunger < 30 || pet.happiness < 30 || pet.energy < 30) {
+                    petEmoji.textContent = '😿';
+                    petStatus.textContent = 'Грустит и нуждается в заботе';
+                } else if (pet.hunger > 70 && pet.happiness > 70 && pet.energy > 70) {
+                    petEmoji.textContent = '😺';
+                    petStatus.textContent = 'Весёлый и довольный';
+                } else {
+                    petEmoji.textContent = '😐';
+                    petStatus.textContent = 'Чего-то не хватает...';
+                }
+            }
+        }
+
+        // --- API ЗАПРОСЫ ---
+
+        async function fetchPetStatus() {
+            try {
+                const response = await fetch(`${API_URL}/pet`);
+                if (response.ok) {
+                    const pet = await response.json();
+                    updatePetUI(pet);
+                }
+            } catch (error) {
+                console.error('Ошибка при получении статуса:', error);
+            }
+        }
+
+        async function feedPet() {
+            try {
+                const response = await fetch(`${API_URL}/pet/feed`, { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    updatePetUI(data.pet);
+                } else {
+                    showError(data.detail);
+                }
+            } catch (error) {
+                showError('Ошибка сети!');
+            }
+        }
+
+        async function playWithPet() {
+            try {
+                const response = await fetch(`${API_URL}/pet/play`, { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    updatePetUI(data.pet);
+                } else {
+                    showError(data.detail);
+                }
+            } catch (error) {
+                showError('Ошибка сети!');
+            }
+        }
+
+        async function sleepPet() {
+            try {
+                const response = await fetch(`${API_URL}/pet/sleep`, { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    updatePetUI(data.pet);
+                } else {
+                    showError(data.detail);
+                }
+            } catch (error) {
+                showError('Ошибка сети!');
+            }
+        }
+
+        async function wakePet() {
+            try {
+                const response = await fetch(`${API_URL}/pet/wake`, { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    updatePetUI(data.pet);
+                } else {
+                    showError(data.detail);
+                }
+            } catch (error) {
+                showError('Ошибка сети!');
+            }
+        }
+
+        // --- АВТООБНОВЛЕНИЕ ---
+        // Загружаем статус сразу при открытии страницы
+        fetchPetStatus();
+
+        // И обновляем каждые 5 секунд (чтобы видеть деградацию статов)
+        setInterval(fetchPetStatus, 5000);
+    </script>
+</body>
+</html>
